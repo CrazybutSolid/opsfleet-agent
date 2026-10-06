@@ -69,7 +69,15 @@ scoping, PII handling and retry budgets are enforced in our own code, outside th
 ADK has a tool-confirmation feature, but a deterministic gate that the model cannot satisfy
 by itself is a stronger guarantee (§6).
 
-**My experience with it:** _TODO (Antonio): describe your experience with ADK / Gemini / BigQuery here._
+**My experience with it:** My production agent work has mostly been in **LangGraph and LangChain**.
+Most recently that was an agentic software factory: LangGraph carries a ticket's acceptance criteria to a
+reviewed pull request through gated, test-first, human-approved phases. Before that I built an LLM
+assessment engine with retrieval and provenance on every claim. At Orange Business I built GenAI backends
+on **GCP (Vertex AI, Cloud Run, IAM)** with Gemini, GPT and Claude, and I am a Google Cloud Professional
+Cloud Architect (2024). **ADK is newer to me than LangGraph.** I chose it here deliberately, despite that,
+because it is the native fit for Gemini and for deploying on GCP. The patterns this design relies on carry
+over directly from my LangGraph work: tool calling, deterministic gates around the model,
+human-in-the-loop confirmation and evaluation-driven iteration.
 
 ### 1.4 Supporting libraries
 
