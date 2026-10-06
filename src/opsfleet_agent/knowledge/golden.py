@@ -44,18 +44,34 @@ _REGIONS = re.compile(
 )
 
 
+# Business paraphrases collapse to one token (embeddings do this in production).
+_SYNONYMS = {
+    "differ": "differ", "difference": "differ", "differently": "differ", "different": "differ",
+    "spender": "spend", "spending": "spend", "spent": "spend", "underspend": "spend",
+    "biggest": "top", "best": "top", "largest": "top", "highest": "top", "most": "top",
+    "versu": "compare", "vs": "compare", "comparison": "compare", "against": "compare",
+    "sales": "revenue", "sale": "revenue", "turnover": "revenue",
+    "profit": "margin", "profitable": "margin", "profitability": "margin",
+    "client": "customer", "buyer": "customer", "shopper": "customer", "user": "customer",
+    "churned": "churn", "attrition": "churn", "brand": "brand", "label": "brand",
+}
+
+
 def tokenize(text: str) -> list[str]:
     text = _REGIONS.sub(" state ", text.lower())
     tokens = []
     for t in _TOKEN.findall(text):
         if t in _STOP:
             continue
+        if t in _SYNONYMS:
+            tokens.append(_SYNONYMS[t])
+            continue
         # crude stemming: plurals and -ing, enough for short business questions
         for suffix in ("ing", "ed", "es", "s"):
             if len(t) > 4 and t.endswith(suffix):
                 t = t[: -len(suffix)]
                 break
-        tokens.append(t)
+        tokens.append(_SYNONYMS.get(t, t))
     return tokens
 
 
