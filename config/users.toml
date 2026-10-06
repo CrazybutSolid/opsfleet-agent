@@ -1,0 +1,26 @@
+# Who may use the agent and which products each person may analyse.
+# A scope restricts the `products` table; every other table is filtered through it
+# (order_items -> products, orders/users -> order_items), so data outside the scope
+# is never visible, not even in aggregates.
+#
+# Dimensions combine with AND; values within a dimension combine with OR.
+
+[users.alice]
+display_name = "Alice"
+role = "Denim category lead"
+categories = ["Jeans", "Pants", "Pants & Capris"]
+
+[users.bob]
+display_name = "Bob"
+role = "Swim & Activewear category lead"
+categories = ["Swim", "Active"]
+
+[users.carol]
+display_name = "Carol"
+role = "Brand partnerships manager"
+brands = ["Calvin Klein", "Tommy Hilfiger", "Levi's"]
+
+[users.harry]
+display_name = "Harry"
+role = "VP Commercial (executive, full catalogue)"
+all_products = true
