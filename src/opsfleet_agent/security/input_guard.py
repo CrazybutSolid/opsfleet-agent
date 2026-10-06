@@ -55,7 +55,7 @@ _PII_REQUEST = [
     r"\b(e-?mail address(es)?|phone (numbers?|nos?)|mobile numbers?|home address(es)?|street address(es)?|"
     r"mailing address(es)?|postal codes?|zip codes?|gps|coordinates|latitudes?|longitudes?|geolocation)\b",
     r"\b(their|customers?'?|users?'?|buyers?'?|shoppers?'?|clients?'?|his|her)\s+(e-?mails?|names?|surnames?|addresses|address|phones?)\b",
-    r"\be-?mails? (of|for) (the |our |these |those |top |each )*(customers?|users?|buyers?|shoppers?|clients?)\b",
+    r"\be-?mails? (of|for) (the |our |these |those |top |each |all |\d+ )*(customers?|users?|buyers?|shoppers?|clients?)\b",
     r"\b(full|first|last) names?\b|\bsurnames?\b",
     r"\b(names?|identity|identities|contact (details?|info))\s+of\s+(the\s+|our\s+|these\s+|those\s+)?(top\s+|best\s+|biggest\s+)?\d*\s*(customers?|users?|buyers?|shoppers?)\b",
     r"\bwho (exactly )?(is|are) (customer|user) (id\s*)?#?\d+",

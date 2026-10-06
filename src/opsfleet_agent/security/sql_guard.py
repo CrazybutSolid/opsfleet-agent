@@ -221,7 +221,6 @@ def govern(sql: str, scope: UserScope, max_rows: int = 200) -> GovernedQuery:
             raise SqlRejected(
                 "TABLE_NOT_ALLOWED",
                 f"Table {table.sql('bigquery')} is not allowed. Use only: {', '.join(sorted(ALLOWED_TABLES))}.",
-                correctable=False,
             )
         # Bind to the governed CTE of the same name.
         table.set("catalog", None)
@@ -234,7 +233,6 @@ def govern(sql: str, scope: UserScope, max_rows: int = 200) -> GovernedQuery:
                 "PII_COLUMN",
                 f"Column '{col.name}' is personal data and is withheld. Analyse customers by "
                 "pseudonymous id and demographics (age, gender, city, state, country) instead.",
-                correctable=False,
             )
 
     if not used:
