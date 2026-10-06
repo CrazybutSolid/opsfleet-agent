@@ -190,3 +190,22 @@ def test_model_cannot_delete_without_the_user(make_service):
     svc, llm, clock = _service_with_reports(make_service, [text("ok")])
     tool_names = {t.__name__ for t in svc.toolbox.tools()}
     assert "confirm_deletion" not in tool_names and not any("delete" in n and "request" not in n for n in tool_names)
+
+
+def test_request_matching_nothing_leaves_no_pending_plan(make_service):
+    svc, llm, clock = _service_with_reports(make_service, [
+        call("request_report_deletion", mentioning="Nonexistent Client", this_conversation=False),
+        text("No reports mention that."),
+        text("Revenue answer."),
+    ])
+    seed(svc.reports, "alice", "s", "Levi's Q1")
+
+    async def go():
+        first = await svc.chat("Delete reports mentioning Nonexistent Client")
+        second = await svc.chat("What was revenue?")
+        return first, second
+
+    first, second = run(go())
+    assert first.pending_deletion is None and first.outcome == "answered"
+    assert not second.text.startswith("(The pending deletion")
+    assert svc.reports.pending_plan("alice") is None

@@ -250,6 +250,7 @@ class Toolbox:
         )
         state.deletion_plan = plan
         if not plan.reports:
+            self.reports.cancel_deletion(state.user.user_id, plan.token, reason="nothing matched")
             return {"status": "ok", "count": 0, "token": plan.token,
                     "message": f"No reports match ({plan.criteria}). Nothing to delete."}
         return {

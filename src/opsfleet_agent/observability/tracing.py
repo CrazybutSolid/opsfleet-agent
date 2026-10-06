@@ -170,7 +170,8 @@ def aggregate(traces: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "turns": n,
         "outcomes": outcomes,
-        "success_rate": round(outcomes.get("answered", 0) / n, 3),
+        # success = the turn did what was asked (answer, confirmation prompt, deletion, cancellation)
+        "success_rate": round(sum(v for k, v in outcomes.items() if k not in ("error", "refused")) / n, 3),
         "refusal_rate": round(outcomes.get("refused", 0) / n, 3),
         "error_rate": round(outcomes.get("error", 0) / n, 3),
         "latency_ms_p50": round(_pct(latencies, 50)),
