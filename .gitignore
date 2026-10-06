@@ -6,3 +6,4 @@ __pycache__/
 var/
 *.egg-info/
 .DS_Store
+.claude/
