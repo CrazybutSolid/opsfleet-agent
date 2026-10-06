@@ -14,12 +14,15 @@ behaving. The data boundary is enforced in code:
 
 ## Videos
 
-| | |
-|---|---|
-| ▶ **[What it does (3:04)](https://github.com/CrazybutSolid/opsfleet-agent/releases/download/v1.0/opsfleet-explainer.mp4)** | The assistant explained for someone new to the project: questions, the golden notebook, safe queries, privacy, scope, reports, the careful delete, staying up when services fail. |
-| ▶ **[For evaluators (3:06)](https://github.com/CrazybutSolid/opsfleet-agent/releases/download/v1.0/opsfleet-for-evaluators.mp4)** | The architecture on Google Cloud, why each choice was made, and answers to the questions an evaluator is likely to ask. |
+**What it does** (3:04): the assistant explained for someone new to the project.
 
-Both are narrated and subtitled, and are attached to the [v1.0 release](https://github.com/CrazybutSolid/opsfleet-agent/releases/tag/v1.0) (about 53 MB each).
+https://github.com/user-attachments/assets/a6b91d5a-bd82-4c32-a7de-7317ecef98c1
+
+**For evaluators** (3:06): the architecture on Google Cloud, why each choice was made, and answers to the questions an evaluator is likely to ask.
+
+https://github.com/user-attachments/assets/23d3ea9d-f5b2-4ef7-85aa-76bf966d4b52
+
+Both are narrated and subtitled. The 1080p versions are attached to the [v1.0 release](https://github.com/CrazybutSolid/opsfleet-agent/releases/tag/v1.0): [explainer](https://github.com/CrazybutSolid/opsfleet-agent/releases/download/v1.0/opsfleet-explainer.mp4) · [for evaluators](https://github.com/CrazybutSolid/opsfleet-agent/releases/download/v1.0/opsfleet-for-evaluators.mp4).
 
 | | |
 |---|---|
