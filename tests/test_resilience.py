@@ -191,15 +191,34 @@ def test_bigquery_down_gives_a_clear_message(make_service):
 
 def test_gemini_429_backs_off_then_falls_back(make_service):
     svc, llm, bq = make_service(
-        script=[api_error(429), api_error(503), api_error(429)],
+        script=[api_error(429), api_error(503)],
         fallback_script=[text("Answer from the fallback model.")],
     )
     result = run(svc.chat("What is revenue?"))
     assert result.text == "Answer from the fallback model."
     t = svc.last_trace
-    assert t.fallback_used and t.llm_retries == 2
+    assert t.fallback_used and t.llm_retries == 1  # backoff once, then the breaker trips
     assert [(c["model"], c["status"]) for c in t.model_calls] == [
-        ("primary", "error"), ("primary", "error"), ("primary", "error"), ("fallback", "ok")]
+        ("primary", "error"), ("primary", "error"), ("fallback", "ok")]
+
+
+def test_failing_primary_is_skipped_on_later_calls(make_service):
+    svc, llm, bq = make_service(
+        script=[api_error(503), api_error(503)],
+        fallback_script=[call("run_sql", sql="SELECT COUNT(*) FROM orders", purpose="n"), text("42."), text("Again.")],
+    )
+
+    async def go():
+        await svc.chat("How many orders?")
+        first = [c["model"] for c in svc.last_trace.model_calls]
+        await svc.chat("And now?")
+        return first, [(c["model"], c["status"]) for c in svc.last_trace.model_calls]
+
+    first, second = run(go())
+    # Within the first turn: primary fails twice, breaker opens, the 2nd model call skips it.
+    assert first == ["primary", "primary", "fallback", "primary", "fallback"]
+    assert second == [("primary", "skipped"), ("fallback", "ok")]
+    assert len(llm.requests) == 2  # the primary was not called again during the cooldown
 
 
 def test_transient_error_recovers_on_primary(make_service):
@@ -218,6 +237,14 @@ def test_non_retryable_error_fails_fast(make_service):
     svc, llm, bq = make_service(script=[api_error(400)], fallback_script=[text("never")])
     result = run(svc.chat("What is revenue?"))
     assert result.outcome == "error" and len(svc.last_trace.model_calls) == 1
+
+
+def test_retired_model_skips_straight_to_fallback(make_service):
+    svc, llm, bq = make_service(script=[api_error(404)], fallback_script=[text("Fallback answered.")])
+    result = run(svc.chat("What is revenue?"))
+    assert result.text == "Fallback answered."
+    assert [c["model"] for c in svc.last_trace.model_calls] == ["primary", "fallback"]
+    assert svc.last_trace.llm_retries == 0
 
 
 def test_rate_limiter_keeps_under_rpm():

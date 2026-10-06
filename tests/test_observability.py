@@ -60,7 +60,8 @@ def test_failed_and_refused_turns_are_traced(make_service, settings):
     assert refused["outcome"] == "refused" and refused["guard"]["verdict"] == "injection"
     assert refused["model_calls"] == []
     assert failed["outcome"] == "error" and "LlmUnavailable" in failed["error"]
-    assert failed["llm_retries"] == 4 and len(failed["model_calls"]) == 6
+    # primary: 2 attempts then breaker opens; fallback (last resort): 3 attempts
+    assert failed["llm_retries"] == 3 and len(failed["model_calls"]) == 5
 
 
 def test_aggregate_metrics(make_service, settings):

@@ -30,10 +30,14 @@ from google.adk.models.llm_response import LlmResponse
 from google.genai import errors as genai_errors
 from pydantic import ConfigDict, Field, PrivateAttr
 
+from .bq import CircuitBreaker
 from .observability.tracing import current_trace
 from .security.pii import redact_text
 
 RETRYABLE = {408, 429, 500, 502, 503, 504}
+# Model-specific failures: retrying the same model is pointless, but another model may work
+# (e.g. 404 "model retired / not available to this key").
+SKIP_TO_FALLBACK = {404}
 
 
 class LlmUnavailable(Exception):
@@ -84,17 +88,25 @@ def _summarise_response(resp: LlmResponse) -> dict:
 class ResilientGemini(BaseLlm):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    model: str = "gemini-2.5-flash"
-    fallback_model: str | None = "gemini-2.5-flash-lite"
+    model: str = "gemini-3.6-flash"
+    fallback_model: str | None = "gemini-3.5-flash-lite"
     max_retries: int = 2
     base_delay_s: float = 2.0
     max_delay_s: float = 20.0
-    call_timeout_s: float = 90.0
+    call_timeout_s: float = 45.0
+    breaker_threshold: int = 2  # consecutive failed attempts before a model is skipped
+    breaker_cooldown_s: float = 120.0
     rate_limiter: RateLimiter | None = Field(default=None, exclude=True)
     # Factory for the underlying model; tests inject fakes here.
     delegate_factory: Callable[[str], BaseLlm] | None = Field(default=None, exclude=True)
     sleep: Callable[[float], Awaitable[None]] = Field(default=asyncio.sleep, exclude=True)
     _delegates: dict = PrivateAttr(default_factory=dict)
+    _breakers: dict = PrivateAttr(default_factory=dict)
+
+    def _breaker(self, model: str) -> CircuitBreaker:
+        if model not in self._breakers:
+            self._breakers[model] = CircuitBreaker(self.breaker_threshold, self.breaker_cooldown_s)
+        return self._breakers[model]
 
     def _delegate(self, model: str) -> BaseLlm:
         if model not in self._delegates:
@@ -116,6 +128,13 @@ class ResilientGemini(BaseLlm):
             trace.prompt = {"system_instruction": si, "chars": len(si)}
         last_error: Exception | None = None
         for model_index, model in enumerate(models):
+            # A model that keeps failing is skipped for a cooldown, so later calls in this
+            # and following turns go straight to the fallback instead of paying for timeouts.
+            # The last model is always tried.
+            if model_index < len(models) - 1 and not self._breaker(model).allow():
+                if trace:
+                    trace.model_call(model=model, attempt=0, status="skipped", error="circuit open")
+                continue
             for attempt in range(self.max_retries + 1):
                 waited = await self.rate_limiter.acquire() if self.rate_limiter else 0.0
                 llm_request.model = model
@@ -131,10 +150,15 @@ class ResilientGemini(BaseLlm):
                 except (genai_errors.APIError, asyncio.TimeoutError, ConnectionError, OSError) as e:
                     code = getattr(e, "code", None) or (408 if isinstance(e, asyncio.TimeoutError) else 503)
                     last_error = e
+                    self._breaker(model).record(ok=False)
                     if trace:
                         trace.model_call(model=model, attempt=attempt + 1, status="error", error_code=code,
                                          error=str(e)[:300], latency_ms=int((time.monotonic() - t0) * 1000),
                                          rate_limit_wait_ms=int(waited * 1000))
+                    if code in SKIP_TO_FALLBACK:
+                        break
+                    if not self._breaker(model).allow() and model_index < len(models) - 1:
+                        break  # breaker just opened: stop retrying this model, fall back now
                     if code not in RETRYABLE:
                         raise LlmUnavailable(f"Model {model} rejected the request ({code}).") from e
                     if attempt < self.max_retries:
@@ -144,6 +168,7 @@ class ResilientGemini(BaseLlm):
                         delay = min(self.max_delay_s, hint if hint else self.base_delay_s * 2**attempt)
                         await self.sleep(delay + random.uniform(0, 0.5))
                     continue
+                self._breaker(model).record(ok=True)
                 usage = next((r.usage_metadata for r in reversed(responses) if r.usage_metadata), None)
                 if trace:
                     if model_index > 0:

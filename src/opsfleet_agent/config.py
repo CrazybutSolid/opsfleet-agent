@@ -25,8 +25,8 @@ def _int(name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class Settings:
-    model: str = "gemini-2.5-flash"
-    fallback_model: str = "gemini-2.5-flash-lite"
+    model: str = "gemini-3.6-flash"
+    fallback_model: str = "gemini-3.5-flash-lite"
     llm_rpm: int = 8
     llm_max_retries: int = 2  # per model, before falling back
     bq_project: str | None = None

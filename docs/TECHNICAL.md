@@ -33,8 +33,8 @@ inside one security perimeter (VPC-SC, one IAM model, one audit trail). Each ser
 
 | Role | Model | Reasoning |
 |---|---|---|
-| Primary (chat, tool calling, SQL writing) | **{{PRIMARY}}** | Recent Flash-class model: strong function calling and SQL, low latency, generous free tier. Analysis quality comes mostly from the multi-step tool loop and the golden examples, not from raw model size. |
-| Fallback | **{{FALLBACK}}** | Different model with a *separate quota bucket*, so a 429 on the primary doesn't also block the fallback. Cheaper and faster, so it's good enough to finish a turn during an incident. |
+| Primary (chat, tool calling, SQL writing) | **`gemini-3.6-flash`** | Recent Flash-class model: strong function calling and SQL, low latency, generous free tier. Analysis quality comes mostly from the multi-step tool loop and the golden examples, not from raw model size. |
+| Fallback | **`gemini-3.5-flash-lite`** | Different model with a *separate quota bucket*, so a 429 on the primary doesn't also block the fallback. Cheaper and faster, so it's good enough to finish a turn during an incident. |
 | Offline judge (QA, design-only) | Gemini Pro-class | Used only in CI and nightly evaluation, where quality matters more than latency and cost. |
 | Embeddings (design-only) | gemini-embedding-001 | See above. |
 
