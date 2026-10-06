@@ -79,6 +79,7 @@ class AgentService:
         self.prefs = PreferenceStore(settings.db_path)
         self.golden = GoldenStore(settings.golden_path, settings.home / "golden_candidates.jsonl")
         self.persona = PersonaFile(settings.persona_path)
+        self.persona.get()
         self.bq = bq or BigQueryRunner(
             project=settings.bq_project, max_bytes_billed=settings.max_bytes_billed, max_rows=settings.max_rows
         )

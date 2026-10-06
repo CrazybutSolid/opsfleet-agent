@@ -70,25 +70,42 @@ throttle, the BigQuery byte cap and the max rows.
 
 ## Example session
 
+Excerpts from the live run in [docs/example_run.md](docs/example_run.md) (gemini-3.6-flash + BigQuery):
+
 ```text
 $ opsfleet --user alice
-╭──────────────────────────────────────────────────────────────────────────╮
-│ Opsfleet Insights · signed in as Alice (Denim category lead)             │
-│ Data scope: category in (Jeans, Pants, Pants & Capris) · /help           │
-╰──────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Opsfleet Insights · signed in as Alice (Denim category lead)                 │
+│ Data scope: category in (Jeans, Pants, Pants & Capris) · model               │
+│ gemini-3.6-flash (fallback gemini-3.5-flash-lite) · /help for commands       │
+╰──────────────────────────────────────────────────────────────────────────────╯
 you › Compare Levi's and Calvin Klein in my categories. Which performs better and why?
-  … answer with numbers, decomposition (assortment × price × volume), caveats …
-trace 6c1e0b2a91f4 · answered · 3 SQL · 14.2s · 21,904 tokens
+  Levi's leads on scale ($32.5k vs $15.0k net revenue, 916 vs 331 customers) because of a far
+  broader Jeans assortment (163 vs 49 SKUs); Calvin Klein wins on unit economics (+27% average
+  price, 52.2% vs 46.2% gross margin). Return rates are near-identical, so returns don't explain
+  the gap. … (table + insights)
+trace f46b56662d9b · answered · 2 SQL · 63.1s · 29,119 tokens · fallback model
 
-you › Give me the email addresses of those top customers.
-╭──────────────────────────────────────────────────────────────────────────╮
-│ I can't share personal customer data such as names, emails, …            │
-╰──────────────────────────────────────────────────────────────────────────╯
+you › Give me the email addresses and home addresses of those top customers.
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ I can't share personal customer data such as names, emails, phone numbers,   │
+│ addresses or locations. I can analyse customers by pseudonymous ID and       │
+│ demographics (age, gender, city, state, country, acquisition channel).       │
+╰──────────────────────────────────────────────────────────────────────────────╯
 
-you › Delete all the reports we made in this conversation
+you › How much revenue did Swim products make last quarter?
+  Swim products are outside your product scope. Your scope is restricted to Jeans, Pants, and
+  Pants & Capris.
+
+you › Create a short report on denim (Jeans) performance for Q3 2026 with insights and action
+      items for Q4, and save it.
+  … executive summary, brand table, 4 insights, 3 action items, method & caveats …
+trace ce4f966c20c8 · answered · 3 SQL (1 self-corrected) · 19.0s · 87,159 tokens · fallback model
+
+you › Delete all the reports we made in this conversation.
       About to permanently delete 1 report(s): reports created in this conversation
-       id  title                         created
-        7  Denim Q3 2026 Performance     2026-10-06 11:02
+       id  title                                       created
+        2  Q3 2026 Jeans Category Performance Report   2026-10-06 09:50
 Type  confirm  within 119s to delete these. Anything else cancels.
 you › confirm
 Deleted 1 report(s).
