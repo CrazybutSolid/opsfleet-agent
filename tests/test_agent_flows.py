@@ -131,5 +131,6 @@ def test_report_is_saved_with_action_items(make_service):
     ])
     result = run(svc.chat("Create a Q1 report with action items for Q2"))
     assert result.saved_report_ids == [1]
+    assert "**Action items**" in result.text  # the report is shown even if the model only says "saved"
     saved = svc.reports.get("alice", 1)
     assert saved.title == "Q1 Denim Report" and "Action items" in saved.body

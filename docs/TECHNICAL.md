@@ -33,7 +33,7 @@ inside one security perimeter (VPC-SC, one IAM model, one audit trail). Each ser
 
 | Role | Model | Reasoning |
 |---|---|---|
-| Primary (chat, tool calling, SQL writing) | **`gemini-3.6-flash`** | Recent Flash-class model: strong function calling and SQL, low latency, generous free tier. Analysis quality comes mostly from the multi-step tool loop and the golden examples, not from raw model size. |
+| Primary (chat, tool calling, SQL writing) | **`gemini-3.6-flash`** | Recent Flash-class model: strong function calling and SQL, low latency, generous free tier. Analysis quality comes mostly from the multi-step tool loop and the golden examples, not from raw model size. *Measured, not assumed:* during the build, the newest `gemini-3.8-flash` and `gemini-3.7-flash` were saturated on the free tier (503s, one 90 s hang), while 3.6-flash answered in about 1.5 s. Switching to 3.8 is a one-line `.env` change once it has capacity. |
 | Fallback | **`gemini-3.5-flash-lite`** | Different model with a *separate quota bucket*, so a 429 on the primary doesn't also block the fallback. Cheaper and faster, so it's good enough to finish a turn during an incident. |
 | Offline judge (QA, design-only) | Gemini Pro-class | Used only in CI and nightly evaluation, where quality matters more than latency and cost. |
 | Embeddings (design-only) | gemini-embedding-001 | See above. |
@@ -279,7 +279,7 @@ rules in the system instruction apply (layer 3). Even a fully jailbroken model c
 that run guarded, scoped, read-only SQL and can't delete anything without the user (§6). That is the
 point of making the tools the safety boundary, not the prompt.
 
-**Tests**: `tests/test_safety.py` (49 cases): non-SELECT, multi-statement, foreign tables/datasets,
+**Tests**: `tests/test_safety.py` (63 cases): non-SELECT, multi-statement, foreign tables/datasets,
 every PII column, `SELECT *` and `TO_JSON_STRING` exposure, reserved CTE shadowing, scope rewrite for
 every table, brand scope escaping, out-of-scope refusal end to end, row/text redaction, a "leak
 anyway" scenario (BigQuery returns PII and the model echoes it: neither the user nor the trace sees it),
@@ -387,7 +387,8 @@ Test: `test_feedback_feeds_the_learning_loop`. The mining job itself is design-o
 | Runaway tool loop | tool counter + ADK `max_llm_calls` | Tool returns `blocked`; turn ends with a clear message | ≤ 14 LLM calls per turn | `tools.py`, `agent.py` | `test_runaway_tool_loop_is_stopped` |
 | Expensive query | dry-run bytes > cap | Refused before execution; model asked to narrow it | `maximum_bytes_billed` (1 GB) also enforced server-side | `bq.py` | `test_dry_run_blocks_expensive_queries_before_they_run`, `test_execution_carries_maximum_bytes_billed_and_labels` |
 | Repeated identical query | cache key = governed SQL | Served from a 10-min in-process cache (+ BigQuery's own 24 h result cache) | $0 | `bq.py` | `test_identical_queries_are_served_from_cache` |
-| Gemini 429 / 5xx / timeout | `APIError.code` | Exponential backoff with jitter (honours `retry in Ns` hints, max 20 s), 2 retries → **fallback model** → 2 retries | Client-side **rate limiter** (sliding window, `OPSFLEET_LLM_RPM`) keeps within the free tier | `llm.py` | `test_gemini_429_backs_off_then_falls_back`, `test_rate_limiter_keeps_under_rpm` |
+| Gemini 429 / 5xx / timeout | `APIError.code`, 45 s per-call timeout | Exponential backoff with jitter (honours `retry in Ns` hints, max 20 s) → **fallback model**. A **per-model circuit breaker** opens after 2 consecutive failures, so for the next 120 s calls go straight to the fallback instead of paying for timeouts again on every model call. | Client-side **rate limiter** (sliding window, `OPSFLEET_LLM_RPM`) keeps within the free tier | `llm.py` | `test_gemini_429_backs_off_then_falls_back`, `test_failing_primary_is_skipped_on_later_calls`, `test_rate_limiter_keeps_under_rpm` |
+| Model retired / not available to the key (404) | `APIError.code == 404` | Skip straight to the fallback (no pointless retries) | none | `llm.py` | `test_retired_model_skips_straight_to_fallback` |
 | Gemini 4xx (bad key, bad request) | non-retryable code | Fail fast (no retry storm), clear message | none | `llm.py` | `test_non_retryable_error_fails_fast` |
 | All models down | `LlmUnavailable` | "The AI service is temporarily unavailable… try again in a minute" | none | `agent.py` | `test_all_models_down_gives_clear_message` |
 | BigQuery down / auth / quota | 5xx, 403, transport, missing credentials | Classified `unavailable`, model told *not* to retry and to tell the user; **circuit breaker** opens after 3 failures for 30 s | No hammering | `bq.py` | `test_bigquery_down_gives_a_clear_message`, `test_circuit_breaker_…`, `test_missing_credentials_is_unavailable_not_a_crash` |
@@ -426,7 +427,7 @@ just another change that must pass. ADK's `adk eval` format can hold the multi-t
 tool trajectories, which lets the gate also check *how* the agent got there (e.g. it called `describe_data`
 for schema questions and never ran SQL for a refusal).
 
-**In the prototype**: `pytest` (117 offline tests with a scripted LLM and fake BigQuery) is the
+**In the prototype**: `pytest` (120 offline tests with a scripted LLM and fake BigQuery) is the
 deterministic layer of this gate: guards, scoping, deletion protocol, resilience, tracing.
 `scripts/smoke.py` is the live layer: real Gemini and BigQuery over scripted scenarios, with the
 transcript saved to `docs/example_run.md`.

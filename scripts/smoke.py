@@ -79,6 +79,7 @@ async def main(user: str, out_path: Path) -> int:
     settings = load_settings()
     svc = AgentService(settings, user)
     session = await svc.new_conversation()
+    svc.persona.get()
     started = time.time()
     lines = [
         "# Example run (live)",

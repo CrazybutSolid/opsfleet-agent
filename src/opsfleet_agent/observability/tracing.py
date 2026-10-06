@@ -163,7 +163,7 @@ def aggregate(traces: list[dict[str, Any]]) -> dict[str, Any]:
     tool_errors: dict[str, int] = {}
     for t in traces:
         for c in t.get("tool_calls", []):
-            if c.get("status") not in ("ok", None):
+            if c.get("status") not in ("ok", "deleted", "cancelled", None):
                 key = f"{c.get('name')}:{c.get('error_code') or c.get('status')}"
                 tool_errors[key] = tool_errors.get(key, 0) + 1
     model_calls = [c for t in traces for c in t.get("model_calls", [])]

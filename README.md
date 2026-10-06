@@ -124,7 +124,7 @@ and a sample trace, is in [docs/example_run.md](docs/example_run.md). To regener
 
 ```
 src/opsfleet_agent/   agent code (see docs/TECHNICAL.md §2 for a module map)
-tests/                117 offline tests (scripted LLM + fake BigQuery)
+tests/                120 offline tests (scripted LLM + fake BigQuery)
 scripts/smoke.py      live end-to-end run → docs/example_run.md
 config/               persona.md (tone), users.toml (scopes)
 data/                 golden_trios.jsonl (13 verified trios)

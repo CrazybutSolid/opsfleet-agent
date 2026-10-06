@@ -203,6 +203,11 @@ class AgentService:
         red = redact_text(text or "")
         trace.add_redactions(red.findings)
         answer = red.text.strip() or "I couldn't produce an answer for that. Could you rephrase?"
+        # A saved report must be visible to the user, whatever the model chose to say about it.
+        for rid in state.saved_report_ids:
+            report = self.reports.get(self.user.user_id, rid)
+            if report and report.body[:200] not in answer:
+                answer += f"\n\n---\n**Saved report #{report.id}: {report.title}**\n\n{report.body}"
         plan = state.deletion_plan if state.deletion_plan and state.deletion_plan.reports else None
         outcome = "confirmation_required" if plan else "answered"
         trace.finish(outcome, answer)
