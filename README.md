@@ -12,6 +12,15 @@ behaving. The data boundary is enforced in code:
 - personal data is filtered again on the way out;
 - the model can **propose** deleting reports, but only the user's own `confirm` deletes anything.
 
+## Videos
+
+| | |
+|---|---|
+| ▶ **[What it does (3:04)](https://github.com/CrazybutSolid/opsfleet-agent/releases/download/v1.0/opsfleet-explainer.mp4)** | The assistant explained for someone new to the project: questions, the golden notebook, safe queries, privacy, scope, reports, the careful delete, staying up when services fail. |
+| ▶ **[For evaluators (3:06)](https://github.com/CrazybutSolid/opsfleet-agent/releases/download/v1.0/opsfleet-for-evaluators.mp4)** | The architecture on Google Cloud, why each choice was made, and answers to the questions an evaluator is likely to ask. |
+
+Both are narrated and subtitled, and are attached to the [v1.0 release](https://github.com/CrazybutSolid/opsfleet-agent/releases/tag/v1.0) (about 53 MB each).
+
 | | |
 |---|---|
 | **Design** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): production HLD on GCP, with diagrams for request flow, delete protocol and learning loops |
