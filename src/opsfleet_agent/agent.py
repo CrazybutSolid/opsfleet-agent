@@ -22,6 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 
 from google.adk.agents import LlmAgent
+from google.adk.agents.invocation_context import LlmCallsLimitExceededError
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.agents.run_config import RunConfig
 from google.adk.models.base_llm import BaseLlm
@@ -167,6 +168,7 @@ class AgentService:
         hits = self.golden.search(message, k=2)
         trace.golden = [{"id": t.id, "score": s, "question": t.question} for t, s in hits]
         self._golden_block = format_for_prompt(hits)
+        self.persona.get()  # refresh from disk so the trace records the version actually used
         trace.context = {
             "persona_version": self.persona.version,
             "preferences": self.prefs.effective(self.user.user_id),
@@ -183,6 +185,12 @@ class AgentService:
             return TurnResult(
                 prefix + "The AI service is temporarily unavailable (rate limit or outage), even after retrying "
                 "and switching to the backup model. Please try again in a minute.",
+                trace.trace_id, "error",
+            )
+        except LlmCallsLimitExceededError:
+            trace.finish("error", error="step limit reached")
+            return TurnResult(
+                prefix + "I couldn't finish that analysis within my step budget. Try splitting it into smaller questions.",
                 trace.trace_id, "error",
             )
         except asyncio.TimeoutError:
