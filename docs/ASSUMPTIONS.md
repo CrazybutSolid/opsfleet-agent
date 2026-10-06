@@ -1,0 +1,27 @@
+# Assumptions and open questions for OpsFleet
+
+The brief invites questions to the client. Rather than block on them, I picked a default for each one,
+designed so it is easy to change, and listed it here for confirmation with the Team Lead and Harry.
+
+| # | Topic | Question for OpsFleet | Default chosen | Where to change it |
+|---|---|---|---|---|
+| 1 | **Product ownership** | What does "products related to him" mean: brand, category, department, supplier, distribution centre? Can one person own several? | A scope is any combination of department, category and brand lists (AND across dimensions, OR within one). Executives can have `all_products`. Every table is filtered *through* the user's products, so customers, orders and aggregates only cover their slice. | `config/users.toml`; production: entitlements table keyed by SSO identity |
+| 2 | **Customer data in scoped views** | Should a category lead see a customer's *whole* basket, or only the lines for their products? | Only their lines (`order_items` of their products). They see `orders` that contain at least one of their items, but no revenue from other categories. | `security/sql_guard.py::governed_ctes` |
+| 3 | **What counts as PII** | Is city / state / age / gender acceptable for analysis? | Withheld: first/last name, email, street address, postal code, latitude/longitude, geography (plus phone/IP for future tables). Allowed: id (pseudonymous), age, gender, city, state, country, traffic source. Those are needed for questions such as "users in state X", and results are aggregated. | `catalog.py::PII_COLUMNS` |
+| 4 | **Small groups** | Do you need k-anonymity (e.g. hide groups with fewer than 10 customers)? | Not in the prototype. Recommended for production (design-only, §5 of TECHNICAL.md). | n/a |
+| 5 | **Revenue definition** | Gross or net? Are returns and cancellations excluded? | Revenue = `SUM(order_items.sale_price)`, excluding *Cancelled* and *Returned* items unless the user asks otherwise. Margin = `sale_price - products.cost`. | Policy in `prompts.py`, golden trios |
+| 6 | **Churn definition** | How does Finance define churn? | Customer active in the previous 3 months who did not order this month (documented in golden trio 005). The agent states its definition every time. | Golden trio 005 |
+| 7 | **Future-dated rows** | thelook is synthetic and contains rows timestamped a few days in the future. Hide them? | Yes. Governed views filter `created_at <= CURRENT_TIMESTAMP()`, so "to date" metrics are honest. | `governed_ctes` |
+| 8 | **Partial periods** | Should the current month be compared with full months? | Never silently. The agent flags partial periods (policy + trio 002/005). | `prompts.py` |
+| 9 | **Tables in scope** | Only `orders`, `order_items`, `products`, `users`? (`events`, `inventory_items`, `distribution_centers` also exist.) | Only the four tables named in the brief. Adding a table is a catalogue entry. | `catalog.py` |
+| 10 | **Saved reports** | Who can see whose reports? Is deletion hard or soft? Is there a retention period? | Reports are private to their owner. The prototype hard-deletes after confirmation (with audit); production does a soft delete with 30-day restore. | `storage/reports.py` |
+| 11 | **Confirmation UX** | Is typing "confirm" acceptable, and is 120 s a good expiry? Should large deletions need more? | Yes: `confirm`/`yes` within 120 s; any other message cancels. Production: more than 20 reports means typing the count. | `Settings.confirm_ttl_s`, `agent.py::_CONFIRM` |
+| 12 | **"This conversation"** | Does it mean the current chat session only? | Yes: the CLI session (`/new` starts a new one). | n/a |
+| 13 | **Persona ownership** | Who may edit the tone, how often, and is approval needed? | CEO office edits `config/persona.md` (prototype) or a versioned Firestore document with preview and publish (production). Safety rules are not in the persona. | `config/persona.md` |
+| 14 | **Languages** | English only? | English answers. Gemini will answer in the user's language if asked; the guards are English-tuned. | n/a |
+| 15 | **Latency vs depth** | Is 10–30 s acceptable for multi-step "why" analysis? | Yes for deep analysis; simple lookups are typically under 10 s. Production streams progress ("Running query 2 of 3…"). | n/a |
+| 16 | **LLM provider and data residency** | Is sending aggregated results to Gemini acceptable? Which region? | Yes. Only aggregated, PII-free, scoped rows reach the model. Production uses Vertex AI in the EU or US region of OpsFleet's choice, with no training on customer data. | n/a |
+| 17 | **Free-tier limits** | Will the prototype be evaluated with the free AI Studio tier? | Yes. A client-side rate limiter (`OPSFLEET_LLM_RPM`, default 8/min), a fallback model with a separate quota, and BM25 retrieval (no embedding calls). | `.env` |
+| 18 | **Golden bucket format** | What do existing trios look like (format, volume, quality, who approves)? | JSONL with question, SQL, report and tags, plus `approved` and `author`. Thirteen seed trios were written and verified against the live data. | `data/golden_trios.jsonl` |
+| 19 | **Identity in the CLI** | How do users authenticate in the prototype? | `--user` flag (trusted, demo only). Production: IAP/SSO. | `cli.py` |
+| 20 | **Cost ceiling** | Is there a per-query or monthly BigQuery budget? | 1 GB `maximum_bytes_billed` per query, dry-run checked; at most 200 rows fetched. | `.env` (`OPSFLEET_MAX_BYTES_BILLED`, `OPSFLEET_MAX_ROWS`) |
